@@ -172,36 +172,46 @@ public class BattlefieldBoardManager : MonoBehaviour
         int distanceX = Mathf.Abs(currentPos.x - targetPos.x);
         int distanceY = Mathf.Abs(currentPos.y - targetPos.y);
 
-        return distanceX <= range && distanceY <= range;
+        return distanceX + distanceY <= range; // Изменили условие для корректной обработки диапазона
     }
 
     private Vector2Int GetCellPosition(Cell cell)
     {
-        float x = cell.transform.position.x;
-        float y = cell.transform.position.y;
-        int row = Mathf.RoundToInt(y / cellSize);
-        int column = Mathf.RoundToInt(x / cellSize);
+        float x = cell.transform.localPosition.x;
+        float y = cell.transform.localPosition.y;
+        int row = Mathf.FloorToInt(y / cellSize);  // Используем FloorToInt для правильной обработки отрицательных значений
+        int column = Mathf.FloorToInt(x / cellSize);
         return new Vector2Int(column, row);
     }
+
 
     //Перемещение юнита на клетку
     public void MoveSelectedUnitToCell(Cell targetCell)
     {
         if (selectedUnit != null && targetCell.GetUnit() == null && IsCellWithinMoveRange(targetCell, 2))
         {
-            Cell currentCell = selectedUnit.GetCurrentCell();
-            if (targetCell != null && targetCell.name != "road")
+            List<Cell> path = FindPath(selectedUnit.GetCurrentCell(), targetCell, 2);
+            if (path != null && path.Count > 0)
             {
-                currentCell.SetUnit(null);
-                currentCell.Deselect(); // Снять выделение с текущей клетки
-                targetCell.SetUnit(selectedUnit);
-                selectedUnit.SetCurrentCell(targetCell); // Устанавливаем новую текущую клетку юнита
+                Cell currentCell = selectedUnit.GetCurrentCell();
+                foreach (Cell cell in path)
+                {
+                    if (!cell.name.Contains("barrier"))
+                    {
+                        currentCell.SetUnit(null);
+                        currentCell.Deselect(); // Снять выделение с текущей клетки
+                        cell.SetUnit(selectedUnit);
+                        selectedUnit.SetCurrentCell(cell); // Устанавливаем новую текущую клетку юнита
+                        currentCell = cell;
+                    }
+                    else
+                    {
+                        Debug.Log("Нельзя ходить по этой клетке");
+                        return;
+                    }
+                }
                 selectedUnit = null;
                 ClearMoveRangeHighlight();
-            }
-            else
-            {
-                Debug.Log("Нельзя ходить по этой клетке");
             }
         }
     }
@@ -222,18 +232,22 @@ public class BattlefieldBoardManager : MonoBehaviour
     //Закраска клеток в диапазоне хода
     private void HighlightMoveRange(Cell cell, int range)
     {
-        Vector2Int currentPos = GetCellPosition(cell);
-        for (int row = currentPos.y - range; row <= currentPos.y + range; row++)
+        for (int row = -range; row <= range; row++)
         {
-            for (int column = currentPos.x - range; column <= currentPos.x + range; column++)
+            for (int column = -range; column <= range; column++)
             {
-                if (row >= 0 && row < rows && column >= 0 && column < columns)
+                if (Mathf.Abs(row) + Mathf.Abs(column) <= range)
                 {
-                    Cell targetCell = GetCellAtPosition(row, column);
-                    if (targetCell != null && IsCellWithinMoveRange(targetCell, range))
+                    int targetRow = GetCellPosition(cell).y + row;
+                    int targetColumn = GetCellPosition(cell).x + column;
+                    if (targetRow >= 0 && targetRow < rows && targetColumn >= 0 && targetColumn < columns)
                     {
-                        targetCell.Highlight(moveRangeColor);
-                        highlightedCells.Add(targetCell);
+                        Cell targetCell = GetCellAtPosition(targetRow, targetColumn);
+                        if (targetCell != null && IsCellWithinMoveRange(targetCell, range) && !targetCell.name.Contains("barrier"))
+                        {
+                            targetCell.Highlight(moveRangeColor);
+                            highlightedCells.Add(targetCell);
+                        }
                     }
                 }
             }
@@ -247,5 +261,108 @@ public class BattlefieldBoardManager : MonoBehaviour
             cell.ClearHighlight();
         }
         highlightedCells.Clear();
+    }
+
+    // Метод поиска пути с использованием A*
+    private List<Cell> FindPath(Cell startCell, Cell goalCell, int maxRange)
+    {
+        Vector2Int start = GetCellPosition(startCell);
+        Vector2Int goal = GetCellPosition(goalCell);
+
+        List<Cell> openSet = new List<Cell>();
+        HashSet<Cell> closedSet = new HashSet<Cell>();
+        Dictionary<Cell, Cell> cameFrom = new Dictionary<Cell, Cell>();
+        Dictionary<Cell, int> gScore = new Dictionary<Cell, int>();
+        Dictionary<Cell, int> fScore = new Dictionary<Cell, int>();
+
+        openSet.Add(startCell);
+        gScore[startCell] = 0;
+        fScore[startCell] = Heuristic(start, goal);
+
+        while (openSet.Count > 0)
+        {
+            Cell current = openSet[0];
+            foreach (Cell cell in openSet)
+            {
+                if (fScore.ContainsKey(cell) && fScore[cell] < fScore[current])
+                {
+                    current = cell;
+                }
+            }
+
+            if (current == goalCell)
+            {
+                return ReconstructPath(cameFrom, current);
+            }
+
+            openSet.Remove(current);
+            closedSet.Add(current);
+
+            foreach (Cell neighbor in GetNeighbors(current))
+            {
+                if (closedSet.Contains(neighbor) || neighbor.name.Contains("barrier"))
+                {
+                    continue;
+                }
+
+                int tentative_gScore = gScore[current] + 1;
+
+                if (!openSet.Contains(neighbor))
+                {
+                    openSet.Add(neighbor);
+                }
+                else if (tentative_gScore >= gScore[neighbor])
+                {
+                    continue;
+                }
+
+                cameFrom[neighbor] = current;
+                gScore[neighbor] = tentative_gScore;
+                fScore[neighbor] = gScore[neighbor] + Heuristic(GetCellPosition(neighbor), goal);
+            }
+        }
+
+        return null;
+    }
+
+    private List<Cell> ReconstructPath(Dictionary<Cell, Cell> cameFrom, Cell current)
+    {
+        List<Cell> path = new List<Cell> { current };
+        while (cameFrom.ContainsKey(current))
+        {
+            current = cameFrom[current];
+            path.Insert(0, current);
+        }
+        return path;
+    }
+
+    private int Heuristic(Vector2Int a, Vector2Int b)
+    {
+        return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
+    }
+
+    private List<Cell> GetNeighbors(Cell cell)
+    {
+        Vector2Int pos = GetCellPosition(cell);
+        List<Cell> neighbors = new List<Cell>();
+
+        AddNeighbor(neighbors, pos.x + 1, pos.y);
+        AddNeighbor(neighbors, pos.x - 1, pos.y);
+        AddNeighbor(neighbors, pos.x, pos.y + 1);
+        AddNeighbor(neighbors, pos.x, pos.y - 1);
+
+        return neighbors;
+    }
+
+    private void AddNeighbor(List<Cell> neighbors, int x, int y)
+    {
+        if (x >= 0 && x < columns && y >= 0 && y < rows)
+        {
+            Cell neighbor = GetCellAtPosition(y, x);
+            if (neighbor != null && !neighbor.name.Contains("barrier"))
+            {
+                neighbors.Add(neighbor);
+            }
+        }
     }
 }
