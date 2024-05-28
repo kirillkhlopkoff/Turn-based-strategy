@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class CameraController : MonoBehaviour
 {
+    private Vector3 startPosition;
     public float panSpeed = 20f;
     public float panBorderThickness = 10f;
     public float zoomSpeed = 2f;
@@ -14,6 +15,7 @@ public class CameraController : MonoBehaviour
     void Start()
     {
         boardManager = FindObjectOfType<BattlefieldBoardManager>();
+        startPosition = transform.position; // Инициализируем startPosition в методе Start
     }
 
     void Update()
@@ -39,11 +41,11 @@ public class CameraController : MonoBehaviour
             lastMousePosition = Input.mousePosition;
         }
 
-        // Ограничение перемещения камеры по границам экрана
-        Vector3 pos = transform.position;
-        pos.x = Mathf.Clamp(pos.x, -panBorderThickness, boardManager.columns * boardManager.cellSize + panBorderThickness);
-        pos.y = Mathf.Clamp(pos.y, -panBorderThickness, boardManager.rows * boardManager.cellSize + panBorderThickness);
-        transform.position = pos;
+        // Ограничение перемещения камеры по границам относительно стартовой позиции
+        Vector3 pos = transform.localPosition;
+        pos.x = Mathf.Clamp(pos.x, startPosition.x - panBorderThickness, startPosition.x + boardManager.columns * boardManager.cellSize + panBorderThickness);
+        pos.y = Mathf.Clamp(pos.y, startPosition.y - panBorderThickness, startPosition.y + boardManager.rows * boardManager.cellSize + panBorderThickness);
+        transform.localPosition = pos;
     }
 
     void HandleCameraZoom()

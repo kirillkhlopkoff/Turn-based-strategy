@@ -13,16 +13,37 @@ public class BattlefieldBoardManager : MonoBehaviour
     private GameUnit selectedUnit;
     public Color moveRangeColor = Color.green;
     private List<Cell> highlightedCells = new List<Cell>();
-    public int unitsAmount = 1;
+    private int unitsAmount;
     public Transform cellsContainer; // GameObject с клетками
     public Cell[] map;
+    public Transform unitsContainer; // GameObject с юнитами
+    public GameUnit[] units;
 
     void Start()
     {
         InitializeBoard();
         //GenerateBoard();
+        InitializeSquad();
         SpawnUnits();
+        DebugCellState(); // Вызовите для отладки
     }
+
+
+    public void DebugCellState()
+    {
+        foreach (Cell cell in map)
+        {
+            if (cell.GetUnit() != null)
+            {
+                Debug.Log($"Cell {cell.name} contains unit {cell.GetUnit().name}");
+            }
+            else
+            {
+                Debug.Log($"Cell {cell.name} is empty");
+            }
+        }
+    }
+
 
     void InitializeBoard()
     {
@@ -38,32 +59,16 @@ public class BattlefieldBoardManager : MonoBehaviour
             }
         }
     }
-
-    //void GenerateBoard()
-    //{
-    //    for (int row = 0; row < rows; row++)
-    //    {
-    //        for (int column = 0; column < columns; column++)
-    //        {
-    //            GameObject cellObject = Instantiate(cellPrefab, transform);
-    //            cellObject.transform.position = new Vector3(column * cellSize, row * cellSize, 0);
-    //            cellObject.name = $"Cell {row},{column}";
-
-    //            SpriteRenderer cellRenderer = cellObject.GetComponent<SpriteRenderer>();
-    //            if ((row + column) % 2 == 0)
-    //            {
-    //                cellRenderer.color = Color.white;
-    //            }
-    //            else
-    //            {
-    //                cellRenderer.color = Color.black;
-    //            }
-
-    //            Cell cell = cellObject.GetComponent<Cell>();
-    //            cell.SetBoardManager(this);
-    //        }
-    //    }
-    //}
+    void InitializeSquad()
+    {
+        // Получаем всех юнитов из контейнера
+        unitsAmount = unitsContainer.childCount;
+        units = new GameUnit[unitsAmount];
+        for (int i = 0; i < unitsAmount; i++)
+        {
+            units[i] = unitsContainer.GetChild(i).GetComponent<GameUnit>();
+        }
+    }
 
     void SpawnUnits()
     {
@@ -74,11 +79,11 @@ public class BattlefieldBoardManager : MonoBehaviour
             Cell startCell = GetCellAtPosition(startY, startX);
             while (startCell == null || startCell.GetUnit() != null)
             {
-                startX++;
+                startY++;
                 if (startX >= columns)
                 {
-                    startX = 0;
-                    startY++;
+                    startX ++;
+                    startY = 0;
                 }
                 if (startY >= rows)
                 {
@@ -88,7 +93,9 @@ public class BattlefieldBoardManager : MonoBehaviour
                 startCell = GetCellAtPosition(startY, startX);
             }
 
-            GameObject unitObject = Instantiate(unitPrefab);
+            GameObject unitObject = units[i].gameObject;
+            unitObject.transform.SetParent(null); // Убираем юнит из контейнера, если нужно
+            unitObject.transform.position = startCell.transform.position; // Устанавливаем позицию юнита на клетке
             GameUnit unit = unitObject.GetComponent<GameUnit>();
             startCell.SetUnit(unit);
             unit.SetCurrentCell(startCell); // Устанавливаем текущую клетку юнита
@@ -149,7 +156,7 @@ public class BattlefieldBoardManager : MonoBehaviour
         if (selectedUnit.GetCurrentCell() != null)
         {
             selectedUnit.GetCurrentCell().Select();
-            HighlightMoveRange(selectedUnit.GetCurrentCell(), 2);
+            HighlightMoveRange(selectedUnit.GetCurrentCell(), selectedUnit.speed);
         }
     }
 
@@ -158,22 +165,65 @@ public class BattlefieldBoardManager : MonoBehaviour
         return selectedUnit;
     }
 
+    //public bool IsCellWithinMoveRange(Cell targetCell, int range)
+    //{
+    //    Cell currentCell = selectedUnit.GetCurrentCell();
+    //    if (currentCell == null)
+    //    {
+    //        return false;
+    //    }
+
+    //    Vector2Int currentPos = GetCellPosition(currentCell);
+    //    Vector2Int targetPos = GetCellPosition(targetCell);
+
+    //    int distanceX = Mathf.Abs(currentPos.x - targetPos.x);
+    //    int distanceY = Mathf.Abs(currentPos.y - targetPos.y);
+
+    //    return distanceX + distanceY <= range; // Изменили условие для корректной обработки диапазона
+    //}
     public bool IsCellWithinMoveRange(Cell targetCell, int range)
     {
-        Cell currentCell = selectedUnit.GetCurrentCell();
-        if (currentCell == null)
+        if (selectedUnit == null || selectedUnit.GetCurrentCell() == null)
         {
             return false;
         }
 
-        Vector2Int currentPos = GetCellPosition(currentCell);
-        Vector2Int targetPos = GetCellPosition(targetCell);
-
-        int distanceX = Mathf.Abs(currentPos.x - targetPos.x);
-        int distanceY = Mathf.Abs(currentPos.y - targetPos.y);
-
-        return distanceX + distanceY <= range; // Изменили условие для корректной обработки диапазона
+        return IsReachableWithinRange(selectedUnit.GetCurrentCell(), targetCell, range);
     }
+
+    private bool IsReachableWithinRange(Cell startCell, Cell targetCell, int range)
+    {
+        Queue<(Cell cell, int distance)> queue = new Queue<(Cell cell, int distance)>();
+        HashSet<Cell> visited = new HashSet<Cell>();
+
+        queue.Enqueue((startCell, 0));
+        visited.Add(startCell);
+
+        while (queue.Count > 0)
+        {
+            var (currentCell, currentDistance) = queue.Dequeue();
+
+            if (currentCell == targetCell)
+            {
+                return true;
+            }
+
+            if (currentDistance < range)
+            {
+                foreach (Cell neighbor in GetNeighbors(currentCell))
+                {
+                    if (!visited.Contains(neighbor) && !neighbor.name.Contains("barrier"))
+                    {
+                        visited.Add(neighbor);
+                        queue.Enqueue((neighbor, currentDistance + 1));
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
 
     private Vector2Int GetCellPosition(Cell cell)
     {
@@ -184,25 +234,60 @@ public class BattlefieldBoardManager : MonoBehaviour
         return new Vector2Int(column, row);
     }
 
-
     //Перемещение юнита на клетку
+    //public void MoveSelectedUnitToCell(Cell targetCell)
+    //{
+    //    if (selectedUnit != null && targetCell.GetUnit() == null && IsCellWithinMoveRange(targetCell, selectedUnit.speed))
+    //    {
+    //        List<Cell> path = FindPath(selectedUnit.GetCurrentCell(), targetCell, selectedUnit.speed);
+    //        if (path != null && path.Count > 0)
+    //        {
+    //            Cell currentCell = selectedUnit.GetCurrentCell();
+    //            foreach (Cell cell in path)
+    //            {
+    //                if (!cell.name.Contains("barrier"))
+    //                {
+    //                    currentCell.SetUnit(null);
+    //                    currentCell.Deselect(); // Снять выделение с текущей клетки
+    //                    cell.SetUnit(selectedUnit);
+    //                    selectedUnit.SetCurrentCell(cell); // Устанавливаем новую текущую клетку юнита
+    //                    currentCell = cell;
+    //                }
+    //                else
+    //                {
+    //                    Debug.Log("Нельзя ходить по этой клетке");
+    //                    return;
+    //                }
+    //            }
+    //            selectedUnit = null;
+    //            ClearMoveRangeHighlight();
+    //        }
+    //    }
+    //}
+
     public void MoveSelectedUnitToCell(Cell targetCell)
     {
-        if (selectedUnit != null && targetCell.GetUnit() == null && IsCellWithinMoveRange(targetCell, 2))
+        if (selectedUnit != null && targetCell.GetUnit() == null && IsCellWithinMoveRange(targetCell, selectedUnit.speed))
         {
-            List<Cell> path = FindPath(selectedUnit.GetCurrentCell(), targetCell, 2);
-            if (path != null && path.Count > 0)
+            List<Cell> path = FindPath(selectedUnit.GetCurrentCell(), targetCell, selectedUnit.speed);
+            if (path != null && path.Count > 0 && (path.Count - 1) <= selectedUnit.speed)
             {
+                // Освобождаем текущую клетку юнита
                 Cell currentCell = selectedUnit.GetCurrentCell();
-                foreach (Cell cell in path)
+                currentCell.SetUnit(null);
+
+                // Обновляем каждую клетку на пути, кроме стартовой клетки
+                for (int i = 0; i < path.Count; i++)
                 {
+                    Cell cell = path[i];
                     if (!cell.name.Contains("barrier"))
                     {
-                        currentCell.SetUnit(null);
-                        currentCell.Deselect(); // Снять выделение с текущей клетки
-                        cell.SetUnit(selectedUnit);
-                        selectedUnit.SetCurrentCell(cell); // Устанавливаем новую текущую клетку юнита
-                        currentCell = cell;
+                        if (i == path.Count - 1)
+                        {
+                            // Устанавливаем юнита в целевую клетку
+                            cell.SetUnit(selectedUnit);
+                            selectedUnit.SetCurrentCell(cell); // Устанавливаем новую текущую клетку юнита
+                        }
                     }
                     else
                     {
@@ -210,11 +295,20 @@ public class BattlefieldBoardManager : MonoBehaviour
                         return;
                     }
                 }
-                selectedUnit = null;
-                ClearMoveRangeHighlight();
+
+                selectedUnit = null; // Снимаем выделение юнита после перемещения
+                ClearMoveRangeHighlight(); // Убираем подсветку диапазона хода
+            }
+            else
+            {
+                Debug.Log("Путь не найден или он слишком длинный");
             }
         }
     }
+
+
+
+
 
     private Cell GetCellAtPosition(int row, int column)
     {
@@ -230,29 +324,63 @@ public class BattlefieldBoardManager : MonoBehaviour
     }
 
     //Закраска клеток в диапазоне хода
-    private void HighlightMoveRange(Cell cell, int range)
+    //private void HighlightMoveRange(Cell cell, int range)
+    //{
+    //    for (int row = -range; row <= range; row++)
+    //    {
+    //        for (int column = -range; column <= range; column++)
+    //        {
+    //            if (Mathf.Abs(row) + Mathf.Abs(column) <= range)
+    //            {
+    //                int targetRow = GetCellPosition(cell).y + row;
+    //                int targetColumn = GetCellPosition(cell).x + column;
+    //                if (targetRow >= 0 && targetRow < rows && targetColumn >= 0 && targetColumn < columns)
+    //                {
+    //                    Cell targetCell = GetCellAtPosition(targetRow, targetColumn);
+    //                    if (targetCell != null && IsCellWithinMoveRange(targetCell, range) && !targetCell.name.Contains("barrier"))
+    //                    {
+    //                        targetCell.Highlight(moveRangeColor);
+    //                        highlightedCells.Add(targetCell);
+    //                    }
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
+    private void HighlightMoveRange(Cell startCell, int range)
     {
-        for (int row = -range; row <= range; row++)
+        ClearMoveRangeHighlight();
+
+        Queue<(Cell cell, int distance)> queue = new Queue<(Cell cell, int distance)>();
+        HashSet<Cell> visited = new HashSet<Cell>();
+
+        queue.Enqueue((startCell, 0));
+        visited.Add(startCell);
+
+        while (queue.Count > 0)
         {
-            for (int column = -range; column <= range; column++)
+            var (currentCell, currentDistance) = queue.Dequeue();
+
+            if (currentDistance < range)
             {
-                if (Mathf.Abs(row) + Mathf.Abs(column) <= range)
+                foreach (Cell neighbor in GetNeighbors(currentCell))
                 {
-                    int targetRow = GetCellPosition(cell).y + row;
-                    int targetColumn = GetCellPosition(cell).x + column;
-                    if (targetRow >= 0 && targetRow < rows && targetColumn >= 0 && targetColumn < columns)
+                    if (!visited.Contains(neighbor) && !neighbor.name.Contains("barrier"))
                     {
-                        Cell targetCell = GetCellAtPosition(targetRow, targetColumn);
-                        if (targetCell != null && IsCellWithinMoveRange(targetCell, range) && !targetCell.name.Contains("barrier"))
-                        {
-                            targetCell.Highlight(moveRangeColor);
-                            highlightedCells.Add(targetCell);
-                        }
+                        visited.Add(neighbor);
+                        queue.Enqueue((neighbor, currentDistance + 1));
                     }
                 }
             }
+
+            if (currentDistance <= range && !currentCell.name.Contains("barrier"))
+            {
+                currentCell.Highlight(moveRangeColor);
+                highlightedCells.Add(currentCell);
+            }
         }
     }
+
 
     private void ClearMoveRangeHighlight()
     {
@@ -263,7 +391,13 @@ public class BattlefieldBoardManager : MonoBehaviour
         highlightedCells.Clear();
     }
 
-    // Метод поиска пути с использованием A*
+    /// <summary>
+    /// FindPath - метод поиска пути с использованием A*
+    /// </summary>
+    /// <param name="startCell">Клетка, с которой начинается поиск пути.</param>
+    /// <param name="goalCell">Целевая клетка, к которой нужно найти путь.</param>
+    /// <param name="maxRange">Максимальное расстояние, на которое юнит может перемещаться.</param>
+    /// <returns>Возвращает список клеток, представляющих найденный путь, или null, если путь не найден.</returns>
     private List<Cell> FindPath(Cell startCell, Cell goalCell, int maxRange)
     {
         Vector2Int start = GetCellPosition(startCell);
@@ -325,6 +459,7 @@ public class BattlefieldBoardManager : MonoBehaviour
         return null;
     }
 
+
     private List<Cell> ReconstructPath(Dictionary<Cell, Cell> cameFrom, Cell current)
     {
         List<Cell> path = new List<Cell> { current };
@@ -359,10 +494,11 @@ public class BattlefieldBoardManager : MonoBehaviour
         if (x >= 0 && x < columns && y >= 0 && y < rows)
         {
             Cell neighbor = GetCellAtPosition(y, x);
-            if (neighbor != null && !neighbor.name.Contains("barrier"))
+            if (neighbor != null) // Убираем проверку на "barrier" здесь, чтобы мы могли использовать ее позже
             {
                 neighbors.Add(neighbor);
             }
         }
     }
+
 }
