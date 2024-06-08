@@ -1,3 +1,4 @@
+using Assets.Scripts.collections;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -11,20 +12,24 @@ public class BattlefieldBoardManager : MonoBehaviour
     public float cellSize = 1f;
     private Cell selectedCell;
     private GameUnit selectedUnit;
-    public Color moveRangeColor = Color.green;
+    public Color moveRangeColor = new Color(0f, 1f, 0f, 0.5f);
     private List<Cell> highlightedCells = new List<Cell>();
     private int unitsAmount;
     public Transform cellsContainer; // GameObject с клетками
     public Cell[] map;
     public Transform unitsContainer; // GameObject с юнитами
     public GameUnit[] units;
+    public Transform enemiesContainer; // GameObject с юнитами
+    public GameUnit[] enemies;
+    private int enemiesAmount;
 
     void Start()
     {
         InitializeBoard();
         //GenerateBoard();
-        InitializeSquad();
-        SpawnUnits();
+        InitializeSquads();
+        SpawnUnits(Squad.SquadType.Allies);
+        SpawnUnits(Squad.SquadType.Enemies);
     }
 
 
@@ -42,7 +47,7 @@ public class BattlefieldBoardManager : MonoBehaviour
             }
         }
     }
-    void InitializeSquad()
+    void InitializeSquads()
     {
         // Получаем всех юнитов из контейнера
         unitsAmount = unitsContainer.childCount;
@@ -50,14 +55,23 @@ public class BattlefieldBoardManager : MonoBehaviour
         for (int i = 0; i < unitsAmount; i++)
         {
             units[i] = unitsContainer.GetChild(i).GetComponent<GameUnit>();
+            units[i].squadType = Squad.SquadType.Allies;
+        }
+
+        enemiesAmount = enemiesContainer.childCount;
+        enemies = new GameUnit[enemiesAmount];
+        for (int i = 0; i < enemiesAmount; i++)
+        {
+            enemies[i] = enemiesContainer.GetChild(i).GetComponent<GameUnit>();
+            enemies[i].squadType = Squad.SquadType.Enemies;
         }
     }
 
-    void SpawnUnits()
+    void SpawnUnits(Squad.SquadType squadType)
     {
-        int startX = 0;
+        int startX = squadType == Squad.SquadType.Allies ? 0: 11;
         int startY = 0;
-        for (int i = 0; i < unitsAmount; i++)
+        for (int i = 0; i <(squadType == Squad.SquadType.Allies ? unitsAmount: enemiesAmount); i++)
         {
             Cell startCell = GetCellAtPosition(startY, startX);
             while (startCell == null || startCell.GetUnit() != null)
@@ -76,7 +90,7 @@ public class BattlefieldBoardManager : MonoBehaviour
                 startCell = GetCellAtPosition(startY, startX);
             }
 
-            GameObject unitObject = units[i].gameObject;
+            GameObject unitObject = squadType == Squad.SquadType.Allies ? units[i].gameObject:enemies[i].gameObject;
             unitObject.transform.SetParent(null); // Убираем юнит из контейнера, если нужно
             unitObject.transform.position = startCell.transform.position; // Устанавливаем позицию юнита на клетке
             GameUnit unit = unitObject.GetComponent<GameUnit>();
@@ -122,6 +136,19 @@ public class BattlefieldBoardManager : MonoBehaviour
             return;
         }
 
+        // Если уже выбран юнит и целевой юнит - противник, атакуем
+        if (selectedUnit != null && unit != null && selectedUnit.squadType != unit.squadType)
+        {
+            AttackUnit(selectedUnit, unit);
+            ClearMoveRangeHighlight();
+            if (selectedUnit.GetCurrentCell() != null)
+            {
+                selectedUnit.GetCurrentCell().Deselect();
+            }
+            selectedUnit = null;
+            return;
+        }
+
         // В противном случае выделить новый юнит
         if (selectedUnit != null)
         {
@@ -142,6 +169,8 @@ public class BattlefieldBoardManager : MonoBehaviour
             HighlightMoveRange(selectedUnit.GetCurrentCell(), selectedUnit.speed);
         }
     }
+
+
 
     public GameUnit GetSelectedUnit()
     {
@@ -279,5 +308,57 @@ public class BattlefieldBoardManager : MonoBehaviour
             }
         }
     }
+
+    public void AttackUnit(GameUnit attacker, GameUnit target)
+    {
+        if (attacker != null && target != null && attacker.squadType != target.squadType)
+        {
+            // Проверяем, находится ли цель на соседней клетке
+            if (IsNeighbor(attacker.GetCurrentCell(), target.GetCurrentCell()))
+            {
+                // Наносим урон
+                target.TakeDamage(attacker.damage);
+
+                // Проверяем здоровье цели
+                if (target.health <= 0)
+                {
+                    DestroyUnit(target);
+                }
+            }
+            else
+            {
+                Debug.Log("Цель слишком далеко для атаки");
+            }
+        }
+    }
+    private bool IsNeighbor(Cell cellA, Cell cellB)
+    {
+        List<(Cell, float)> neighborsWithCosts = GetNeighborsWithCosts(cellA);
+        foreach (var (neighbor, cost) in neighborsWithCosts)
+        {
+            if (neighbor == cellB)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void MoveUnitToCell(GameUnit unit, Cell targetCell)
+    {
+        Cell currentCell = unit.GetCurrentCell();
+        currentCell.SetUnit(null);
+        targetCell.SetUnit(unit);
+        unit.SetCurrentCell(targetCell);
+    }
+
+    private void DestroyUnit(GameUnit unit)
+    {
+        if (unit != null)
+        {
+            unit.Die();
+        }
+    }
+
 
 }

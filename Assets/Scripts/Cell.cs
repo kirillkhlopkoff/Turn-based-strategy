@@ -37,18 +37,17 @@ public class Cell : MonoBehaviour
     {
         if (unit != null)
         {
-            Debug.Log($"Selecting unit at cell: {gameObject.name}");
+            //Debug.Log($"Selecting unit at cell: {gameObject.name}");
             boardManager.SelectUnit(unit);
         }
         else if (boardManager.GetSelectedUnit() != null)
         {
-            Debug.Log($"Moving selected unit to cell: {gameObject.name}");
+            //Debug.Log($"Moving selected unit to cell: {gameObject.name}");
             boardManager.MoveSelectedUnitToCell(this);
-            boardManager.DebugCellState(); // Вызов отладочного метода после перемещения юнита
         }
         else
         {
-            Debug.Log($"Selecting cell: {gameObject.name}");
+            //Debug.Log($"Selecting cell: {gameObject.name}");
             boardManager.SelectCell(this);
         }
     }
