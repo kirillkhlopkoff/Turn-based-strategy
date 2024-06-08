@@ -3,11 +3,11 @@ using UnityEngine;
 
 public static class UnitSpawner
 {
-    public static void SpawnUnits(BattlefieldBoardManager boardManager, Squad.SquadType squadType)
+    public static void SpawnUnits(BattlefieldBoardManager boardManager, Enums.SquadType squadType)
     {
-        int startX = squadType == Squad.SquadType.Allies ? 0 : 11;
+        int startX = squadType == Enums.SquadType.Allies ? 0 : 11;
         int startY = 0;
-        GameUnit[] units = squadType == Squad.SquadType.Allies ? boardManager.units : boardManager.enemies;
+        GameUnit[] units = squadType == Enums.SquadType.Allies ? boardManager.units : boardManager.enemies;
 
         for (int i = 0; i < units.Length; i++)
         {

@@ -24,8 +24,8 @@ public class BattlefieldBoardManager : MonoBehaviour
     {
         InitializeBoard();
         InitializeSquads();
-        SpawnUnits(Squad.SquadType.Allies);
-        SpawnUnits(Squad.SquadType.Enemies);
+        SpawnUnits(Enums.SquadType.Allies);
+        SpawnUnits(Enums.SquadType.Enemies);
     }
 
     void InitializeBoard()
@@ -46,11 +46,11 @@ public class BattlefieldBoardManager : MonoBehaviour
     void InitializeSquads()
     {
         // Получаем всех юнитов из контейнера
-        units = UnitInitializer.InitializeUnits(unitsContainer, Squad.SquadType.Allies);
-        enemies = UnitInitializer.InitializeUnits(enemiesContainer, Squad.SquadType.Enemies);
+        units = UnitInitializer.InitializeUnits(unitsContainer, Enums.SquadType.Allies);
+        enemies = UnitInitializer.InitializeUnits(enemiesContainer, Enums.SquadType.Enemies);
     }
 
-    void SpawnUnits(Squad.SquadType squadType)
+    void SpawnUnits(Enums.SquadType squadType)
     {
         UnitSpawner.SpawnUnits(this, squadType);
     }

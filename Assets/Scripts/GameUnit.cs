@@ -6,10 +6,11 @@ public class GameUnit : MonoBehaviour, IUnitActions
 {
     private Cell currentCell;
     public int speed;
-    public int health;
-    public int armor;
-    public int damage;
-    public Squad.SquadType squadType;
+    public int troopStrength;
+    public float armor;
+    public float damage;
+    public Enums.SquadType squadType;
+    public Enums.UnitCategory category;
 
     public void SetCurrentCell(Cell cell)
     {
@@ -32,14 +33,33 @@ public class GameUnit : MonoBehaviour, IUnitActions
         // Реализация защиты
     }
 
-    public void TakeDamage(int damage)
+    public void TakeDamage(float damage, float armor, int attackersTroopStrength)
     {
-        health -= damage;
-        if (health <= 0)
+        // Рассчитываем урон, который проходит через броню
+        float breakThrough = damage - armor;
+        int finalDamage = Mathf.RoundToInt(damage* attackersTroopStrength);
+
+        // Если броня не полностью поглощает урон
+        if (breakThrough > 0)
+        {
+            finalDamage += Mathf.RoundToInt(finalDamage * breakThrough);
+        }
+        // Если урон не полностью пробивает броню 
+        if (breakThrough < 0)
+        {
+            finalDamage += Mathf.RoundToInt(finalDamage * breakThrough);
+        }
+
+        // Уменьшаем здоровье на рассчитанный урон
+        troopStrength -= finalDamage;
+
+        // Проверяем, умер ли юнит
+        if (troopStrength <= 0)
         {
             Die();
         }
     }
+
 
     public void Die()
     {

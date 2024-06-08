@@ -10,5 +10,7 @@ namespace Assets.Scripts.Interfaces
     {
         void Attack(GameUnit target);
         void Defend();
+        void TakeDamage(float damage, float armor, int attackersTroopStrength);
+        void Die();
     }
 }

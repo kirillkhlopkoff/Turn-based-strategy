@@ -3,7 +3,7 @@ using UnityEngine;
 
 public static class UnitInitializer
 {
-    public static GameUnit[] InitializeUnits(Transform container, Squad.SquadType squadType)
+    public static GameUnit[] InitializeUnits(Transform container, Enums.SquadType squadType)
     {
         int unitCount = container.childCount;
         GameUnit[] units = new GameUnit[unitCount];

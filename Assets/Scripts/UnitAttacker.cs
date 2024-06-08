@@ -8,9 +8,9 @@ public static class UnitAttacker
         {
             if (NeighborChecker.IsNeighbor(attacker.GetCurrentCell(), target.GetCurrentCell(), boardManager))
             {
-                target.TakeDamage(attacker.damage);
+                target.TakeDamage(attacker.damage, target.armor, attacker.troopStrength);
 
-                if (target.health <= 0)
+                if (target.troopStrength <= 0)
                 {
                     DestroyUnit(target);
                 }

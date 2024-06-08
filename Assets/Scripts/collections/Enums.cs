@@ -6,12 +6,22 @@ using System.Threading.Tasks;
 
 namespace Assets.Scripts.collections
 {
-    public class Squad
+    public class Enums
     {
         public enum SquadType
         {
             Allies = 1,
             Enemies = 2
+        }
+
+        public enum UnitCategory
+        {
+            Infantry = 1,
+            ArmoredInfantry = 2,
+            Archers = 3,
+            Horsemen = 4,
+            ArmoredHorsemen = 5,
+            WarElephants = 6
         }
     }
 }

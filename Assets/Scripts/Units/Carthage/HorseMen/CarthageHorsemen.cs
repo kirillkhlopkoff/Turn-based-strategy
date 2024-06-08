@@ -1,11 +1,12 @@
-
+using Assets.Scripts.collections;
 public class CarthageHorsemen : GameUnit
 {
     void Start()
     {
         speed = 5;
-        health = 120;
-        armor = 20;
-        damage = 30;
+        troopStrength = 100;
+        armor = 0.2f;
+        damage = 0.3f;
+        category = Enums.UnitCategory.Horsemen;
     }
 }

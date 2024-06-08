@@ -1,11 +1,12 @@
-
+using Assets.Scripts.collections;
 public class CarthageButtleElephante : GameUnit
 {
     void Start()
     {
         speed = 4;
-        health = 220;
-        armor = 20;
-        damage = 40;
+        troopStrength = 60;
+        armor = 0.8f;
+        damage = 0.6f;
+        category = Enums.UnitCategory.WarElephants;
     }
 }

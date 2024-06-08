@@ -1,20 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Unity.VisualScripting;
+﻿using Assets.Scripts.collections;
 
-namespace Assets.Scripts.Units.Carthage.Infantry
+public class CarthageInfantry : GameUnit
 {
-    public class CarthageInfantry : GameUnit
+    void Start()
     {
-        void Start()
-        {
-            speed = 3;
-            health = 100;
-            armor = 10;
-            damage = 20;
-        }
+        speed = 3;
+        troopStrength = 200;
+        armor = 0.1f;
+        damage = 0.1f;
+        category = Enums.UnitCategory.Infantry;
     }
 }
