@@ -280,7 +280,7 @@ public class BattlefieldBoardManager : MonoBehaviour
                 for (int i = 0; i < path.Count; i++)
                 {
                     Cell cell = path[i];
-                    if (!cell.name.Contains("barrier"))
+                    if (!cell.name.Contains("barrier") && cell.GetUnit() == null)
                     {
                         if (i == path.Count - 1)
                         {
@@ -365,7 +365,7 @@ public class BattlefieldBoardManager : MonoBehaviour
             {
                 foreach (Cell neighbor in GetNeighbors(currentCell))
                 {
-                    if (!visited.Contains(neighbor) && !neighbor.name.Contains("barrier"))
+                    if (!visited.Contains(neighbor) && !neighbor.name.Contains("barrier") && neighbor.GetUnit() == null)
                     {
                         visited.Add(neighbor);
                         queue.Enqueue((neighbor, currentDistance + 1));
@@ -373,7 +373,7 @@ public class BattlefieldBoardManager : MonoBehaviour
                 }
             }
 
-            if (currentDistance <= range && !currentCell.name.Contains("barrier"))
+            if (currentDistance <= range && !currentCell.name.Contains("barrier") /*&& currentCell.GetUnit() == null*/)
             {
                 currentCell.Highlight(moveRangeColor);
                 highlightedCells.Add(currentCell);
@@ -434,7 +434,7 @@ public class BattlefieldBoardManager : MonoBehaviour
 
             foreach (Cell neighbor in GetNeighbors(current))
             {
-                if (closedSet.Contains(neighbor) || neighbor.name.Contains("barrier"))
+                if (closedSet.Contains(neighbor) || neighbor.name.Contains("barrier") || neighbor.GetUnit() != null)
                 {
                     continue;
                 }
