@@ -164,23 +164,6 @@ public class BattlefieldBoardManager : MonoBehaviour
     {
         return selectedUnit;
     }
-
-    //public bool IsCellWithinMoveRange(Cell targetCell, int range)
-    //{
-    //    Cell currentCell = selectedUnit.GetCurrentCell();
-    //    if (currentCell == null)
-    //    {
-    //        return false;
-    //    }
-
-    //    Vector2Int currentPos = GetCellPosition(currentCell);
-    //    Vector2Int targetPos = GetCellPosition(targetCell);
-
-    //    int distanceX = Mathf.Abs(currentPos.x - targetPos.x);
-    //    int distanceY = Mathf.Abs(currentPos.y - targetPos.y);
-
-    //    return distanceX + distanceY <= range; // Изменили условие для корректной обработки диапазона
-    //}
     public bool IsCellWithinMoveRange(Cell targetCell, int range)
     {
         if (selectedUnit == null || selectedUnit.GetCurrentCell() == null)
@@ -235,41 +218,12 @@ public class BattlefieldBoardManager : MonoBehaviour
     }
 
     //Перемещение юнита на клетку
-    //public void MoveSelectedUnitToCell(Cell targetCell)
-    //{
-    //    if (selectedUnit != null && targetCell.GetUnit() == null && IsCellWithinMoveRange(targetCell, selectedUnit.speed))
-    //    {
-    //        List<Cell> path = FindPath(selectedUnit.GetCurrentCell(), targetCell, selectedUnit.speed);
-    //        if (path != null && path.Count > 0)
-    //        {
-    //            Cell currentCell = selectedUnit.GetCurrentCell();
-    //            foreach (Cell cell in path)
-    //            {
-    //                if (!cell.name.Contains("barrier"))
-    //                {
-    //                    currentCell.SetUnit(null);
-    //                    currentCell.Deselect(); // Снять выделение с текущей клетки
-    //                    cell.SetUnit(selectedUnit);
-    //                    selectedUnit.SetCurrentCell(cell); // Устанавливаем новую текущую клетку юнита
-    //                    currentCell = cell;
-    //                }
-    //                else
-    //                {
-    //                    Debug.Log("Нельзя ходить по этой клетке");
-    //                    return;
-    //                }
-    //            }
-    //            selectedUnit = null;
-    //            ClearMoveRangeHighlight();
-    //        }
-    //    }
-    //}
 
     public void MoveSelectedUnitToCell(Cell targetCell)
     {
         if (selectedUnit != null && targetCell.GetUnit() == null && IsCellWithinMoveRange(targetCell, selectedUnit.speed))
         {
-            List<Cell> path = FindPath(selectedUnit.GetCurrentCell(), targetCell, selectedUnit.speed);
+            /*List<Cell> path = FindPath(selectedUnit.GetCurrentCell(), targetCell, selectedUnit.speed);
             if (path != null && path.Count > 0 && (path.Count - 1) <= selectedUnit.speed)
             {
                 // Освобождаем текущую клетку юнита
@@ -298,6 +252,17 @@ public class BattlefieldBoardManager : MonoBehaviour
 
                 selectedUnit = null; // Снимаем выделение юнита после перемещения
                 ClearMoveRangeHighlight(); // Убираем подсветку диапазона хода
+            }*/
+            if (highlightedCells.Contains(targetCell))
+            {
+                // Освобождаем текущую клетку юнита
+                Cell currentCell = selectedUnit.GetCurrentCell();
+                currentCell.SetUnit(null);
+                // Устанавливаем юнита в целевую клетку
+                targetCell.SetUnit(selectedUnit);
+                selectedUnit.SetCurrentCell(targetCell); // Устанавливаем новую текущую клетку юнита
+                selectedUnit = null; // Снимаем выделение юнита после перемещения
+                ClearMoveRangeHighlight(); // Убираем подсветку диапазона хода
             }
             else
             {
@@ -324,34 +289,11 @@ public class BattlefieldBoardManager : MonoBehaviour
     }
 
     //Закраска клеток в диапазоне хода
-    //private void HighlightMoveRange(Cell cell, int range)
-    //{
-    //    for (int row = -range; row <= range; row++)
-    //    {
-    //        for (int column = -range; column <= range; column++)
-    //        {
-    //            if (Mathf.Abs(row) + Mathf.Abs(column) <= range)
-    //            {
-    //                int targetRow = GetCellPosition(cell).y + row;
-    //                int targetColumn = GetCellPosition(cell).x + column;
-    //                if (targetRow >= 0 && targetRow < rows && targetColumn >= 0 && targetColumn < columns)
-    //                {
-    //                    Cell targetCell = GetCellAtPosition(targetRow, targetColumn);
-    //                    if (targetCell != null && IsCellWithinMoveRange(targetCell, range) && !targetCell.name.Contains("barrier"))
-    //                    {
-    //                        targetCell.Highlight(moveRangeColor);
-    //                        highlightedCells.Add(targetCell);
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
     private void HighlightMoveRange(Cell startCell, int range)
     {
         ClearMoveRangeHighlight();
 
-        Queue<(Cell cell, int distance)> queue = new Queue<(Cell cell, int distance)>();
+        Queue<(Cell cell, float distance)> queue = new Queue<(Cell cell, float distance)>();
         HashSet<Cell> visited = new HashSet<Cell>();
 
         queue.Enqueue((startCell, 0));
@@ -363,17 +305,17 @@ public class BattlefieldBoardManager : MonoBehaviour
 
             if (currentDistance < range)
             {
-                foreach (Cell neighbor in GetNeighbors(currentCell))
+                foreach (var (neighbor, moveCost) in GetNeighborsWithCosts(currentCell))
                 {
                     if (!visited.Contains(neighbor) && !neighbor.name.Contains("barrier") && neighbor.GetUnit() == null)
                     {
                         visited.Add(neighbor);
-                        queue.Enqueue((neighbor, currentDistance + 1));
+                        queue.Enqueue((neighbor, currentDistance + moveCost));
                     }
                 }
             }
 
-            if (currentDistance <= range && !currentCell.name.Contains("barrier") /*&& currentCell.GetUnit() == null*/)
+            if (currentDistance <= range && !currentCell.name.Contains("barrier"))
             {
                 currentCell.Highlight(moveRangeColor);
                 highlightedCells.Add(currentCell);
@@ -398,7 +340,7 @@ public class BattlefieldBoardManager : MonoBehaviour
     /// <param name="goalCell">Целевая клетка, к которой нужно найти путь.</param>
     /// <param name="maxRange">Максимальное расстояние, на которое юнит может перемещаться.</param>
     /// <returns>Возвращает список клеток, представляющих найденный путь, или null, если путь не найден.</returns>
-    private List<Cell> FindPath(Cell startCell, Cell goalCell, int maxRange)
+    /*private List<Cell> FindPath(Cell startCell, Cell goalCell, int maxRange)
     {
         Vector2Int start = GetCellPosition(startCell);
         Vector2Int goal = GetCellPosition(goalCell);
@@ -457,7 +399,7 @@ public class BattlefieldBoardManager : MonoBehaviour
         }
 
         return null;
-    }
+    }*/
 
 
     private List<Cell> ReconstructPath(Dictionary<Cell, Cell> cameFrom, Cell current)
@@ -476,7 +418,7 @@ public class BattlefieldBoardManager : MonoBehaviour
         return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
     }
 
-    private List<Cell> GetNeighbors(Cell cell)
+    /*private List<Cell> GetNeighbors(Cell cell)
     {
         Vector2Int pos = GetCellPosition(cell);
         List<Cell> neighbors = new List<Cell>();
@@ -494,9 +436,71 @@ public class BattlefieldBoardManager : MonoBehaviour
         if (x >= 0 && x < columns && y >= 0 && y < rows)
         {
             Cell neighbor = GetCellAtPosition(y, x);
-            if (neighbor != null) // Убираем проверку на "barrier" здесь, чтобы мы могли использовать ее позже
+            if (neighbor != null)
             {
                 neighbors.Add(neighbor);
+            }
+        }
+    }*/
+
+    private List<Cell> GetNeighbors(Cell cell)
+    {
+        Vector2Int pos = GetCellPosition(cell);
+        List<Cell> neighbors = new List<Cell>();
+
+        AddNeighbor(neighbors, pos.x + 1, pos.y);
+        AddNeighbor(neighbors, pos.x - 1, pos.y);
+        AddNeighbor(neighbors, pos.x, pos.y + 1);
+        AddNeighbor(neighbors, pos.x, pos.y - 1);
+
+        // Добавляем диагональные направления
+        AddNeighbor(neighbors, pos.x + 1, pos.y + 1);
+        AddNeighbor(neighbors, pos.x + 1, pos.y - 1);
+        AddNeighbor(neighbors, pos.x - 1, pos.y + 1);
+        AddNeighbor(neighbors, pos.x - 1, pos.y - 1);
+
+        return neighbors;
+    }
+
+    private List<(Cell, float)> GetNeighborsWithCosts(Cell cell)
+    {
+        Vector2Int pos = GetCellPosition(cell);
+        List<(Cell, float)> neighbors = new List<(Cell, float)>();
+
+        AddNeighborWithCost(neighbors, pos.x + 1, pos.y, 1f);
+        AddNeighborWithCost(neighbors, pos.x - 1, pos.y, 1f);
+        AddNeighborWithCost(neighbors, pos.x, pos.y + 1, 1f);
+        AddNeighborWithCost(neighbors, pos.x, pos.y - 1, 1f);
+
+        // Добавляем диагональные направления
+        AddNeighborWithCost(neighbors, pos.x + 1, pos.y + 1, 1.5f);
+        AddNeighborWithCost(neighbors, pos.x + 1, pos.y - 1, 1.5f);
+        AddNeighborWithCost(neighbors, pos.x - 1, pos.y + 1, 1.5f);
+        AddNeighborWithCost(neighbors, pos.x - 1, pos.y - 1, 1.5f);
+
+        return neighbors;
+    }
+
+    private void AddNeighbor(List<Cell> neighbors, int x, int y)
+    {
+        if (x >= 0 && x < columns && y >= 0 && y < rows)
+        {
+            Cell neighbor = GetCellAtPosition(y, x);
+            if (neighbor != null)
+            {
+                neighbors.Add(neighbor);
+            }
+        }
+    }
+
+    private void AddNeighborWithCost(List<(Cell, float)> neighbors, int x, int y, float cost)
+    {
+        if (x >= 0 && x < columns && y >= 0 && y < rows)
+        {
+            Cell neighbor = GetCellAtPosition(y, x);
+            if (neighbor != null)
+            {
+                neighbors.Add((neighbor, cost));
             }
         }
     }
