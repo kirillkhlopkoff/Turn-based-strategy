@@ -13,11 +13,11 @@ public class CarthageArmoredInfantry : GameUnit
 
     public override void Attack(GameUnit target)
     {
-        // Специфическая для пехоты реализация атаки
+        
     }
 
     public override void Defend()
     {
-        // Специфическая для пехоты реализация защиты
+        
     }
 }

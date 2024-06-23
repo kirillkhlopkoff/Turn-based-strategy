@@ -16,7 +16,7 @@ public static class UnitSelector
             return;
         }
 
-        if (selectedUnit != null && unit != null && selectedUnit.squadType != unit.squadType)
+        if (selectedUnit != null && unit != null && selectedUnit.team != unit.team)
         {
             boardManager.AttackUnit(selectedUnit, unit);
             boardManager.ClearMoveRangeHighlight();

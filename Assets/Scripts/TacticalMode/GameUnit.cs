@@ -9,7 +9,7 @@ public class GameUnit : MonoBehaviour, IUnitActions
     public int troopStrength;
     public float armor;
     public float damage;
-    public Enums.SquadType squadType;
+    public Enums.Team team;
     public Enums.UnitCategory category;
 
     public void SetCurrentCell(Cell cell)

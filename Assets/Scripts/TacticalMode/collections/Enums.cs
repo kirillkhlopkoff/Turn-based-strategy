@@ -8,10 +8,10 @@ namespace Assets.Scripts.collections
 {
     public class Enums
     {
-        public enum SquadType
+        public enum Team
         {
-            Allies = 1,
-            Enemies = 2
+            Allies,
+            Enemies
         }
 
         public enum UnitCategory

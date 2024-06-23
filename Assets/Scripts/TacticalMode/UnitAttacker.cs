@@ -4,7 +4,7 @@ public static class UnitAttacker
 {
     public static void AttackUnit(GameUnit attacker, GameUnit target, BattlefieldBoardManager boardManager)
     {
-        if (attacker != null && target != null && attacker.squadType != target.squadType)
+        if (attacker != null && target != null && attacker.team != target.team)
         {
             if (NeighborChecker.IsNeighbor(attacker.GetCurrentCell(), target.GetCurrentCell(), boardManager))
             {

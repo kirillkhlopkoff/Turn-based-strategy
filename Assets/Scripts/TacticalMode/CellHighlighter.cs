@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using static Assets.Scripts.collections.Enums;
 
 public static class CellHighlighter
 {
@@ -44,5 +45,21 @@ public static class CellHighlighter
             cell.ClearHighlight();
         }
         highlightedCells.Clear();
+    }
+
+    public static void HighlightUnits(Team team, Cell[] map, Color highlightColor)
+    {
+        foreach (Cell cell in map)
+        {
+            GameUnit unit = cell.GetUnit();
+            if (unit != null && unit.team == team)
+            {
+                cell.Highlight(highlightColor);
+            }
+            else
+            {
+                cell.ClearHighlight();
+            }
+        }
     }
 }

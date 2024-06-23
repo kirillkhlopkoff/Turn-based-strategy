@@ -13,6 +13,7 @@ public static class UnitMover
             selectedUnit.SetCurrentCell(targetCell); // Устанавливаем новую текущую клетку юнита
             selectedUnit = null; // Снимаем выделение юнита после перемещения
             boardManager.ClearMoveRangeHighlight(); // Убираем подсветку диапазона хода
+
         }
         else
         {
